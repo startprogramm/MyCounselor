@@ -1,0 +1,313 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ========== SCHOOL & ADMIN ==========
+model School {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  city      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  counselors Counselor[]
+  students   Student[]
+}
+
+model SuperAdmin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // bcrypt hashed
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ========== USERS ==========
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student    Student?
+  counselor  Counselor?
+  recommender Recommender?
+}
+
+enum UserRole {
+  STUDENT
+  COUNSELOR
+  RECOMMENDER
+}
+
+// ========== STUDENT ==========
+model Student {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+  counselorId String?
+  counselor Counselor? @relation(fields: [counselorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requests  Request[]
+  messages  Message[]
+  meetings  Meeting[]
+  letters   RecommendationLetter[] @relation("StudentRecipient")
+
+  @@index([schoolId])
+  @@index([counselorId])
+}
+
+// ========== COUNSELOR ==========
+model Counselor {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  students              Student[]
+  requests             Request[]
+  messages             Message[]
+  meetings             Meeting[]
+  availabilitySlots    AvailabilitySlot[]
+  guidancePages        GuidancePage[]
+  recommendationLetters RecommendationLetter[]
+
+  @@index([schoolId])
+}
+
+// ========== REQUESTS (Core Task System) ==========
+model Request {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  counselorId String
+  counselor Counselor @relation(fields: [counselorId], references: [id])
+
+  type      RequestType
+  status    RequestStatus @default(PENDING)
+  deadline  DateTime?
+  priority  Int @default(0) // Higher = more urgent
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+  messages  Message[]
+  meetings  Meeting[]
+  letter    RecommendationLetter?
+
+  @@index([studentId])
+  @@index([counselorId])
+  @@index([deadline])
+}
+
+enum RequestType {
+  TRANSCRIPT
+  MID_YEAR_REPORT
+  FINAL_REPORT
+  RECOMMENDATION_LETTER
+  MEETING
+  OTHER
+}
+
+enum RequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// ========== DOCUMENTS ==========
+model Document {
+  id        String   @id @default(cuid())
+  requestId String?
+  request   Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  fileName  String
+  fileUrl   String
+  fileSize  Int
+  mimeType  String
+
+  uploadedBy String? // User ID
+  createdAt  DateTime @default(now())
+
+  @@index([requestId])
+}
+
+// ========== RECOMMENDATION LETTERS ==========
+model RecommendationLetter {
+  id        String   @id @default(cuid())
+  requestId String   @unique
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student  @relation("StudentRecipient", fields: [studentId], references: [id], onDelete: Cascade)
+  counselorId String
+  counselor Counselor @relation(fields: [counselorId], references: [id])
+  recommenderId String
+  recommender Recommender @relation(fields: [recommenderId], references: [id], onDelete: Cascade)
+
+  fileName  String
+  fileUrl   String
+  visibility RecommenderVisibility @default(COUNSELOR_ONLY)
+  status    LetterStatus @default(PENDING)
+  uploadedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([counselorId])
+  @@index([recommenderId])
+}
+
+enum RecommenderVisibility {
+  COUNSELOR_ONLY
+  COUNSELOR_AND_STUDENT
+}
+
+enum LetterStatus {
+  PENDING
+  SUBMITTED
+  VIEWED
+}
+
+// ========== RECOMMENDER ==========
+model Recommender {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  email     String   @unique
+  inviteToken String? @unique
+  inviteExpiry DateTime?
+  isActive  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  letters   RecommendationLetter[]
+}
+
+// ========== MESSAGING ==========
+model Message {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  counselorId String
+  counselor Counselor @relation(fields: [counselorId], references: [id])
+  requestId String?
+  request   Request?  @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  content   String
+  sender    MessageSender
+  isRead    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId])
+  @@index([counselorId])
+  @@index([requestId])
+}
+
+enum MessageSender {
+  STUDENT
+  COUNSELOR
+}
+
+// ========== MEETINGS & SCHEDULING ==========
+model Meeting {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  counselorId String
+  counselor Counselor @relation(fields: [counselorId], references: [id])
+  requestId String?
+  request   Request?  @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  startTime DateTime
+  endTime   DateTime
+  title     String?
+  notes     String?
+  status    MeetingStatus @default(SCHEDULED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([counselorId])
+  @@index([startTime])
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+// ========== AVAILABILITY SLOTS ==========
+model AvailabilitySlot {
+  id          String   @id @default(cuid())
+  counselorId String
+  counselor   Counselor @relation(fields: [counselorId], references: [id], onDelete: Cascade)
+
+  dayOfWeek   Int      // 0 = Sunday, 6 = Saturday
+  startTime   String   // "09:00"
+  endTime     String   // "17:00"
+  isAvailable Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([counselorId])
+}
+
+// ========== GUIDANCE PAGES ==========
+model GuidancePage {
+  id          String   @id @default(cuid())
+  counselorId String?
+  counselor   Counselor? @relation(fields: [counselorId], references: [id], onDelete: SetNull)
+
+  slug      String   @unique
+  title     String
+  content   String   // Rich text content
+  category  GuidanceCategory
+  grade     Int?     // For grade-specific guidance
+  isPublished Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+enum GuidanceCategory {
+  ADMISSIONS_ROADMAP
+  COMPETITIONS
+  OPPORTUNITIES
+  UNIVERSITIES
+  COUNTRIES
+  COMMON_MISTAKES
+  TIME_MANAGEMENT
+  COMMUNICATION
+}
