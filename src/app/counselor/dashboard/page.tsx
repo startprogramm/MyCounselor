@@ -1,4 +1,4 @@
-'use client'
+import Link from 'next/link'
 
 export default function CounselorDashboard() {
   return (
@@ -7,34 +7,33 @@ export default function CounselorDashboard() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-indigo-600">MyCounselor</h1>
           <div className="flex gap-4">
-            <a href="/counselor/dashboard" className="text-slate-600 hover:text-slate-900">
+            <Link href="/counselor/dashboard" prefetch={false} className="text-slate-600 hover:text-slate-900">
               Dashboard
-            </a>
-            <a href="/counselor/students" className="text-slate-600 hover:text-slate-900">
+            </Link>
+            <Link href="/counselor/students" prefetch={false} className="text-slate-600 hover:text-slate-900">
               Students
-            </a>
-            <a href="/counselor/tasks" className="text-slate-600 hover:text-slate-900">
+            </Link>
+            <Link href="/counselor/tasks" prefetch={false} className="text-slate-600 hover:text-slate-900">
               Tasks
-            </a>
-            <a href="/counselor/meetings" className="text-slate-600 hover:text-slate-900">
+            </Link>
+            <Link href="/counselor/meetings" prefetch={false} className="text-slate-600 hover:text-slate-900">
               Meetings
-            </a>
-            <a href="/counselor/availability" className="text-slate-600 hover:text-slate-900">
+            </Link>
+            <Link href="/counselor/availability" prefetch={false} className="text-slate-600 hover:text-slate-900">
               Availability
-            </a>
-            <a href="/counselor/guidance" className="text-slate-600 hover:text-slate-900">
+            </Link>
+            <Link href="/counselor/guidance" prefetch={false} className="text-slate-600 hover:text-slate-900">
               Guidance
-            </a>
-            <a href="/logout" className="text-red-600 hover:text-red-700">
+            </Link>
+            <Link href="/logout" prefetch={false} className="text-red-600 hover:text-red-700">
               Logout
-            </a>
+            </Link>
           </div>
         </div>
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {/* Quick Stats */}
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="text-sm text-slate-600">Active Students</div>
             <div className="text-3xl font-bold text-indigo-600">24</div>
@@ -53,7 +52,6 @@ export default function CounselorDashboard() {
           </div>
         </div>
 
-        {/* Priority Tasks */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h2 className="text-xl font-bold mb-4">Priority Tasks</h2>
           <div className="space-y-3">

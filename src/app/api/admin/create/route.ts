@@ -13,7 +13,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if admin already exists
     const existingAdmin = await prisma.superAdmin.findUnique({
       where: { email },
     })
@@ -33,16 +32,14 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         name,
       },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
     })
 
-    return NextResponse.json(
-      {
-        id: admin.id,
-        email: admin.email,
-        name: admin.name,
-      },
-      { status: 201 }
-    )
+    return NextResponse.json(admin, { status: 201 })
   } catch (error) {
     console.error('Error creating admin:', error)
     return NextResponse.json(

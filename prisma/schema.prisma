@@ -35,20 +35,15 @@ model SuperAdmin {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
+  password  String?  // bcrypt hashed - optional for OAuth users
   name      String?
-  role      UserRole
+  role      String   // STUDENT, COUNSELOR, RECOMMENDER
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   student    Student?
   counselor  Counselor?
   recommender Recommender?
-}
-
-enum UserRole {
-  STUDENT
-  COUNSELOR
-  RECOMMENDER
 }
 
 // ========== STUDENT ==========
@@ -103,8 +98,8 @@ model Request {
   counselorId String
   counselor Counselor @relation(fields: [counselorId], references: [id])
 
-  type      RequestType
-  status    RequestStatus @default(PENDING)
+  type      String   // TRANSCRIPT, MID_YEAR_REPORT, FINAL_REPORT, RECOMMENDATION_LETTER, MEETING, OTHER
+  status    String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
   deadline  DateTime?
   priority  Int @default(0) // Higher = more urgent
   description String?
@@ -120,22 +115,6 @@ model Request {
   @@index([studentId])
   @@index([counselorId])
   @@index([deadline])
-}
-
-enum RequestType {
-  TRANSCRIPT
-  MID_YEAR_REPORT
-  FINAL_REPORT
-  RECOMMENDATION_LETTER
-  MEETING
-  OTHER
-}
-
-enum RequestStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
 }
 
 // ========== DOCUMENTS ==========
@@ -169,8 +148,8 @@ model RecommendationLetter {
 
   fileName  String
   fileUrl   String
-  visibility RecommenderVisibility @default(COUNSELOR_ONLY)
-  status    LetterStatus @default(PENDING)
+  visibility String @default("COUNSELOR_ONLY") // COUNSELOR_ONLY, COUNSELOR_AND_STUDENT
+  status    String @default("PENDING") // PENDING, SUBMITTED, VIEWED
   uploadedAt DateTime?
 
   createdAt DateTime @default(now())
@@ -179,17 +158,6 @@ model RecommendationLetter {
   @@index([studentId])
   @@index([counselorId])
   @@index([recommenderId])
-}
-
-enum RecommenderVisibility {
-  COUNSELOR_ONLY
-  COUNSELOR_AND_STUDENT
-}
-
-enum LetterStatus {
-  PENDING
-  SUBMITTED
-  VIEWED
 }
 
 // ========== RECOMMENDER ==========
@@ -220,7 +188,7 @@ model Message {
   request   Request?  @relation(fields: [requestId], references: [id], onDelete: SetNull)
 
   content   String
-  sender    MessageSender
+  sender    String   // STUDENT, COUNSELOR
   isRead    Boolean  @default(false)
 
   createdAt DateTime @default(now())
@@ -228,11 +196,6 @@ model Message {
   @@index([studentId])
   @@index([counselorId])
   @@index([requestId])
-}
-
-enum MessageSender {
-  STUDENT
-  COUNSELOR
 }
 
 // ========== MEETINGS & SCHEDULING ==========
@@ -249,7 +212,7 @@ model Meeting {
   endTime   DateTime
   title     String?
   notes     String?
-  status    MeetingStatus @default(SCHEDULED)
+  status    String @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -257,12 +220,6 @@ model Meeting {
   @@index([studentId])
   @@index([counselorId])
   @@index([startTime])
-}
-
-enum MeetingStatus {
-  SCHEDULED
-  COMPLETED
-  CANCELLED
 }
 
 // ========== AVAILABILITY SLOTS ==========
@@ -291,7 +248,7 @@ model GuidancePage {
   slug      String   @unique
   title     String
   content   String   // Rich text content
-  category  GuidanceCategory
+  category  String   // ADMISSIONS_ROADMAP, COMPETITIONS, OPPORTUNITIES, UNIVERSITIES, COUNTRIES, COMMON_MISTAKES, TIME_MANAGEMENT, COMMUNICATION
   grade     Int?     // For grade-specific guidance
   isPublished Boolean @default(true)
 
@@ -299,15 +256,4 @@ model GuidancePage {
   updatedAt DateTime @updatedAt
 
   @@index([category])
-}
-
-enum GuidanceCategory {
-  ADMISSIONS_ROADMAP
-  COMPETITIONS
-  OPPORTUNITIES
-  UNIVERSITIES
-  COUNTRIES
-  COMMON_MISTAKES
-  TIME_MANAGEMENT
-  COMMUNICATION
 }

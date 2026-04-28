@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/auth'
+
+const redirectPathByRole: Record<string, string> = {
+  STUDENT: '/student/dashboard',
+  COUNSELOR: '/counselor/dashboard',
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,24 +19,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const admin = await prisma.superAdmin.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
       select: {
         id: true,
         email: true,
         name: true,
         password: true,
+        role: true,
       },
     })
 
-    if (!admin) {
+    if (!user || !user.password) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       )
     }
 
-    const passwordValid = await verifyPassword(password, admin.password)
+    const passwordValid = await verifyPassword(password, user.password)
 
     if (!passwordValid) {
       return NextResponse.json(
@@ -39,10 +46,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const sessionData = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    }
+
+    const cookieStore = await cookies()
+    cookieStore.set('session', JSON.stringify(sessionData), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
+
     return NextResponse.json({
-      id: admin.id,
-      email: admin.email,
-      name: admin.name,
+      success: true,
+      user: sessionData,
+      redirectPath: redirectPathByRole[user.role] ?? '/',
     })
   } catch (error) {
     console.error('Error logging in:', error)
